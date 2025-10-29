@@ -1040,153 +1040,153 @@ class TacticalAnalyzer:
         motifs.extend(self._detect_potential_forks(board, not moving_side, original_move_san, is_opportunity=False))
         return motifs
 
-        def _find_pins_on_board(self, board: chess.Board, side: chess.Color) -> List[Dict[str, str]]:
+    def _find_pins_on_board(self, board: chess.Board, side: chess.Color) -> List[Dict[str, str]]:
 
-            motifs = []
+        motifs = []
 
-            for pinner_square in board.pieces(chess.QUEEN, side) | board.pieces(chess.ROOK, side) | board.pieces(chess.BISHOP, side):
+        for pinner_square in board.pieces(chess.QUEEN, side) | board.pieces(chess.ROOK, side) | board.pieces(chess.BISHOP, side):
 
-                pinner_piece = board.piece_at(pinner_square)
+            pinner_piece = board.piece_at(pinner_square)
 
-                if not pinner_piece: continue
+            if not pinner_piece: continue
 
-    
 
-                is_pinner_safe = True
 
-                if board.is_attacked_by(not side, pinner_square):
+            is_pinner_safe = True
 
-                    opponent_board = board.copy()
+            if board.is_attacked_by(not side, pinner_square):
 
-                    opponent_board.turn = not side
+                opponent_board = board.copy()
 
-                    for attacker_square in opponent_board.attackers(not side, pinner_square):
+                opponent_board.turn = not side
 
-                        capture_pinner_move = chess.Move(attacker_square, pinner_square)
+                for attacker_square in opponent_board.attackers(not side, pinner_square):
 
-                        if capture_pinner_move in opponent_board.legal_moves:
+                    capture_pinner_move = chess.Move(attacker_square, pinner_square)
 
-                            if self.see(opponent_board, capture_pinner_move) >= 0:
+                    if capture_pinner_move in opponent_board.legal_moves:
 
-                                is_pinner_safe = False
+                        if self.see(opponent_board, capture_pinner_move) >= 0:
 
-                                break
+                            is_pinner_safe = False
 
-                if not is_pinner_safe:
+                            break
 
-                    continue
+            if not is_pinner_safe:
 
-    
+                continue
 
-                if pinner_piece.piece_type == chess.ROOK:
 
-                    directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
-                elif pinner_piece.piece_type == chess.BISHOP:
+            if pinner_piece.piece_type == chess.ROOK:
 
-                    directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+                directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
-                else: # Queen
+            elif pinner_piece.piece_type == chess.BISHOP:
 
-                    directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+                directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+            else: # Queen
+
+                directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+            
+
+            for dr, df in directions:
+
+                front_piece_info = None; back_piece_info = None
+
+                current_rank, current_file = chess.square_rank(pinner_square), chess.square_file(pinner_square)
+
+                for _ in range(8):
+
+                    current_rank += dr; current_file += df
+
+                    if not (0 <= current_rank <= 7 and 0 <= current_file <= 7): break
+
+                    ray_square = chess.square(current_file, current_rank)
+
+                    piece_on_ray = board.piece_at(ray_square)
+
+                    if piece_on_ray:
+
+                        if front_piece_info is None:
+
+                            front_piece_info = (piece_on_ray, ray_square)
+
+                        else:
+
+                            back_piece_info = (piece_on_ray, ray_square); break
 
                 
 
-                for dr, df in directions:
+                if front_piece_info and back_piece_info:
 
-                    front_piece_info = None; back_piece_info = None
+                    front_piece, front_square = front_piece_info
 
-                    current_rank, current_file = chess.square_rank(pinner_square), chess.square_file(pinner_square)
+                    back_piece, back_square = back_piece_info
 
-                    for _ in range(8):
 
-                        current_rank += dr; current_file += df
 
-                        if not (0 <= current_rank <= 7 and 0 <= current_file <= 7): break
+                    if front_piece.piece_type == chess.PAWN or front_piece.color == side or back_piece.color == side:
 
-                        ray_square = chess.square(current_file, current_rank)
+                        continue
 
-                        piece_on_ray = board.piece_at(ray_square)
 
-                        if piece_on_ray:
 
-                            if front_piece_info is None:
+                    is_exploitable_pin = False
 
-                                front_piece_info = (piece_on_ray, ray_square)
+                    temp_board = board.copy()
 
-                            else:
+                    temp_board.turn = not side
 
-                                back_piece_info = (piece_on_ray, ray_square); break
+
+
+                    for move in temp_board.legal_moves:
+
+                        if move.from_square == front_square:
+
+                            board_after_front_moved = temp_board.copy()
+
+                            board_after_front_moved.push(move)
+
+                            board_after_front_moved.turn = side
+
+                            capture_back_piece_move = chess.Move(pinner_square, back_square)
+
+
+
+                            if capture_back_piece_move in board_after_front_moved.legal_moves:
+
+                                see_value = self.see(board_after_front_moved, capture_back_piece_move)
+
+                                if see_value > 0:
+
+                                    is_exploitable_pin = True
+
+                                    break
 
                     
 
-                    if front_piece_info and back_piece_info:
+                    if is_exploitable_pin:
 
-                        front_piece, front_square = front_piece_info
+                        pinner_color = "White" if pinner_piece.color == chess.WHITE else "Black"
 
-                        back_piece, back_square = back_piece_info
+                        pinned_color = "White" if front_piece.color == chess.WHITE else "Black"
 
-    
+                        valuable_piece_color = "White" if back_piece.color == chess.WHITE else "Black"
 
-                        if front_piece.piece_type == chess.PAWN or front_piece.color == side or back_piece.color == side:
+                        details = (f"The {pinner_color} {chess.piece_name(pinner_piece.piece_type)} on {chess.square_name(pinner_square)} "
 
-                            continue
+                                    f"pins the enemy {pinned_color} {chess.piece_name(front_piece.piece_type)} on {chess.square_name(front_square)} "
 
-    
+                                    f"to the {valuable_piece_color} {chess.piece_name(back_piece.piece_type)} on {chess.square_name(back_square)}. "
 
-                        is_exploitable_pin = False
+                                    "Moving the pinned piece would allow a profitable capture.")
 
-                        temp_board = board.copy()
+                        motifs.append({"tactic": "Pin", "details": details, "value": self.PIECE_VALUES.get(front_piece.piece_type, 0), "squares": [pinner_square, front_square, back_square]})
 
-                        temp_board.turn = not side
-
-    
-
-                        for move in temp_board.legal_moves:
-
-                            if move.from_square == front_square:
-
-                                board_after_front_moved = temp_board.copy()
-
-                                board_after_front_moved.push(move)
-
-                                board_after_front_moved.turn = side
-
-                                capture_back_piece_move = chess.Move(pinner_square, back_square)
-
-    
-
-                                if capture_back_piece_move in board_after_front_moved.legal_moves:
-
-                                    see_value = self.see(board_after_front_moved, capture_back_piece_move)
-
-                                    if see_value > 0:
-
-                                        is_exploitable_pin = True
-
-                                        break
-
-                        
-
-                        if is_exploitable_pin:
-
-                            pinner_color = "White" if pinner_piece.color == chess.WHITE else "Black"
-
-                            pinned_color = "White" if front_piece.color == chess.WHITE else "Black"
-
-                            valuable_piece_color = "White" if back_piece.color == chess.WHITE else "Black"
-
-                            details = (f"The {pinner_color} {chess.piece_name(pinner_piece.piece_type)} on {chess.square_name(pinner_square)} "
-
-                                       f"pins the enemy {pinned_color} {chess.piece_name(front_piece.piece_type)} on {chess.square_name(front_square)} "
-
-                                       f"to the {valuable_piece_color} {chess.piece_name(back_piece.piece_type)} on {chess.square_name(back_square)}. "
-
-                                       "Moving the pinned piece would allow a profitable capture.")
-
-                            motifs.append({"tactic": "Pin", "details": details, "value": self.PIECE_VALUES.get(front_piece.piece_type, 0), "squares": [pinner_square, front_square, back_square]})
-
-            return motifs
+        return motifs
 
     def _detect_potential_pins(self, board: chess.Board, side: chess.Color, original_move_san: str, is_opportunity: bool) -> List[Dict[str, str]]:
         motifs = []
