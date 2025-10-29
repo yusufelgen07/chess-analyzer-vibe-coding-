@@ -33,6 +33,8 @@ pip install -r requirements.txt
    * ✅ Your **Lichess API token**.
    * ✅ Set **Depth = 10** for analysis.
    * ✅ Choose **Gemini Flash Lite** for testing.
+   * ✅ Click Save and Close
+   * ✅ add your username in chess.com or lichess ->> click fetch games ->> choose your game ->> click analyze Selected game 
 
 ---
 
