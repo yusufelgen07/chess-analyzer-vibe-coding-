@@ -1,0 +1,11 @@
+chess
+python-chess
+google-generativeai
+customtkinter
+
+# For Stockfish (download separately)
+# For board rendering (install cairosvg and its dependencies)
+cairosvg
+Pillow
+svglib
+reportlab
