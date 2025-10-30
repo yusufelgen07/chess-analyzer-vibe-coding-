@@ -2,7 +2,7 @@ chess
 python-chess
 google-generativeai
 customtkinter
-
+chess.com
 # For Stockfish (download separately)
 # For board rendering (install cairosvg and its dependencies)
 cairosvg
