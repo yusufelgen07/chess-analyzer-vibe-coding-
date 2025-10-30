@@ -44,7 +44,7 @@ pip install -r requirements.txt
 * 📱 **Cross-Platform Apps** — build Android, iOS, or Windows installer versions.
 * 🧩 **“Difficult Moves” Mode** — like Chessable: practice tricky positions interactively.
 * 🧠 **Deeper Analysis Logic** — refine tactical/positional understanding and Gemini prompts.
-* ⚡ **Stockfish Integration** — improve evaluation depth and synchronization.
+* ⚡ **Stockfish** -synchronization because analysis is too slow.
 * 📘 **Learning Mode** — auto-extract puzzles or lessons from books (e.g. *1001 Chess Exercises for Beginners*).
 * 📊 **More Statistics** — performance graphs, accuracy over time, motif frequency, etc.
 * 🧰 **Installer Creation** — make it user-friendly for offline use.
