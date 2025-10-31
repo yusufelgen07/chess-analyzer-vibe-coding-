@@ -1040,153 +1040,153 @@ class TacticalAnalyzer:
         motifs.extend(self._detect_potential_forks(board, not moving_side, original_move_san, is_opportunity=False))
         return motifs
 
-        def _find_pins_on_board(self, board: chess.Board, side: chess.Color) -> List[Dict[str, str]]:
+    def _find_pins_on_board(self, board: chess.Board, side: chess.Color) -> List[Dict[str, str]]:
 
-            motifs = []
+        motifs = []
 
-            for pinner_square in board.pieces(chess.QUEEN, side) | board.pieces(chess.ROOK, side) | board.pieces(chess.BISHOP, side):
+        for pinner_square in board.pieces(chess.QUEEN, side) | board.pieces(chess.ROOK, side) | board.pieces(chess.BISHOP, side):
 
-                pinner_piece = board.piece_at(pinner_square)
+            pinner_piece = board.piece_at(pinner_square)
 
-                if not pinner_piece: continue
+            if not pinner_piece: continue
 
-    
 
-                is_pinner_safe = True
 
-                if board.is_attacked_by(not side, pinner_square):
+            is_pinner_safe = True
 
-                    opponent_board = board.copy()
+            if board.is_attacked_by(not side, pinner_square):
 
-                    opponent_board.turn = not side
+                opponent_board = board.copy()
 
-                    for attacker_square in opponent_board.attackers(not side, pinner_square):
+                opponent_board.turn = not side
 
-                        capture_pinner_move = chess.Move(attacker_square, pinner_square)
+                for attacker_square in opponent_board.attackers(not side, pinner_square):
 
-                        if capture_pinner_move in opponent_board.legal_moves:
+                    capture_pinner_move = chess.Move(attacker_square, pinner_square)
 
-                            if self.see(opponent_board, capture_pinner_move) >= 0:
+                    if capture_pinner_move in opponent_board.legal_moves:
 
-                                is_pinner_safe = False
+                        if self.see(opponent_board, capture_pinner_move) >= 0:
 
-                                break
+                            is_pinner_safe = False
 
-                if not is_pinner_safe:
+                            break
 
-                    continue
+            if not is_pinner_safe:
 
-    
+                continue
 
-                if pinner_piece.piece_type == chess.ROOK:
 
-                    directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
-                elif pinner_piece.piece_type == chess.BISHOP:
+            if pinner_piece.piece_type == chess.ROOK:
 
-                    directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+                directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
-                else: # Queen
+            elif pinner_piece.piece_type == chess.BISHOP:
 
-                    directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+                directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+            else: # Queen
+
+                directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+            
+
+            for dr, df in directions:
+
+                front_piece_info = None; back_piece_info = None
+
+                current_rank, current_file = chess.square_rank(pinner_square), chess.square_file(pinner_square)
+
+                for _ in range(8):
+
+                    current_rank += dr; current_file += df
+
+                    if not (0 <= current_rank <= 7 and 0 <= current_file <= 7): break
+
+                    ray_square = chess.square(current_file, current_rank)
+
+                    piece_on_ray = board.piece_at(ray_square)
+
+                    if piece_on_ray:
+
+                        if front_piece_info is None:
+
+                            front_piece_info = (piece_on_ray, ray_square)
+
+                        else:
+
+                            back_piece_info = (piece_on_ray, ray_square); break
 
                 
 
-                for dr, df in directions:
+                if front_piece_info and back_piece_info:
 
-                    front_piece_info = None; back_piece_info = None
+                    front_piece, front_square = front_piece_info
 
-                    current_rank, current_file = chess.square_rank(pinner_square), chess.square_file(pinner_square)
+                    back_piece, back_square = back_piece_info
 
-                    for _ in range(8):
 
-                        current_rank += dr; current_file += df
 
-                        if not (0 <= current_rank <= 7 and 0 <= current_file <= 7): break
+                    if front_piece.piece_type == chess.PAWN or front_piece.color == side or back_piece.color == side:
 
-                        ray_square = chess.square(current_file, current_rank)
+                        continue
 
-                        piece_on_ray = board.piece_at(ray_square)
 
-                        if piece_on_ray:
 
-                            if front_piece_info is None:
+                    is_exploitable_pin = False
 
-                                front_piece_info = (piece_on_ray, ray_square)
+                    temp_board = board.copy()
 
-                            else:
+                    temp_board.turn = not side
 
-                                back_piece_info = (piece_on_ray, ray_square); break
+
+
+                    for move in temp_board.legal_moves:
+
+                        if move.from_square == front_square:
+
+                            board_after_front_moved = temp_board.copy()
+
+                            board_after_front_moved.push(move)
+
+                            board_after_front_moved.turn = side
+
+                            capture_back_piece_move = chess.Move(pinner_square, back_square)
+
+
+
+                            if capture_back_piece_move in board_after_front_moved.legal_moves:
+
+                                see_value = self.see(board_after_front_moved, capture_back_piece_move)
+
+                                if see_value > 0:
+
+                                    is_exploitable_pin = True
+
+                                    break
 
                     
 
-                    if front_piece_info and back_piece_info:
+                    if is_exploitable_pin:
 
-                        front_piece, front_square = front_piece_info
+                        pinner_color = "White" if pinner_piece.color == chess.WHITE else "Black"
 
-                        back_piece, back_square = back_piece_info
+                        pinned_color = "White" if front_piece.color == chess.WHITE else "Black"
 
-    
+                        valuable_piece_color = "White" if back_piece.color == chess.WHITE else "Black"
 
-                        if front_piece.piece_type == chess.PAWN or front_piece.color == side or back_piece.color == side:
+                        details = (f"The {pinner_color} {chess.piece_name(pinner_piece.piece_type)} on {chess.square_name(pinner_square)} "
 
-                            continue
+                                    f"pins the enemy {pinned_color} {chess.piece_name(front_piece.piece_type)} on {chess.square_name(front_square)} "
 
-    
+                                    f"to the {valuable_piece_color} {chess.piece_name(back_piece.piece_type)} on {chess.square_name(back_square)}. "
 
-                        is_exploitable_pin = False
+                                    "Moving the pinned piece would allow a profitable capture.")
 
-                        temp_board = board.copy()
+                        motifs.append({"tactic": "Pin", "details": details, "value": self.PIECE_VALUES.get(front_piece.piece_type, 0), "squares": [pinner_square, front_square, back_square]})
 
-                        temp_board.turn = not side
-
-    
-
-                        for move in temp_board.legal_moves:
-
-                            if move.from_square == front_square:
-
-                                board_after_front_moved = temp_board.copy()
-
-                                board_after_front_moved.push(move)
-
-                                board_after_front_moved.turn = side
-
-                                capture_back_piece_move = chess.Move(pinner_square, back_square)
-
-    
-
-                                if capture_back_piece_move in board_after_front_moved.legal_moves:
-
-                                    see_value = self.see(board_after_front_moved, capture_back_piece_move)
-
-                                    if see_value > 0:
-
-                                        is_exploitable_pin = True
-
-                                        break
-
-                        
-
-                        if is_exploitable_pin:
-
-                            pinner_color = "White" if pinner_piece.color == chess.WHITE else "Black"
-
-                            pinned_color = "White" if front_piece.color == chess.WHITE else "Black"
-
-                            valuable_piece_color = "White" if back_piece.color == chess.WHITE else "Black"
-
-                            details = (f"The {pinner_color} {chess.piece_name(pinner_piece.piece_type)} on {chess.square_name(pinner_square)} "
-
-                                       f"pins the enemy {pinned_color} {chess.piece_name(front_piece.piece_type)} on {chess.square_name(front_square)} "
-
-                                       f"to the {valuable_piece_color} {chess.piece_name(back_piece.piece_type)} on {chess.square_name(back_square)}. "
-
-                                       "Moving the pinned piece would allow a profitable capture.")
-
-                            motifs.append({"tactic": "Pin", "details": details, "value": self.PIECE_VALUES.get(front_piece.piece_type, 0), "squares": [pinner_square, front_square, back_square]})
-
-            return motifs
+        return motifs
 
     def _detect_potential_pins(self, board: chess.Board, side: chess.Color, original_move_san: str, is_opportunity: bool) -> List[Dict[str, str]]:
         motifs = []
@@ -2170,55 +2170,62 @@ class ChessAnalyzer:
         return Constants.BLUNDER, points_loss, cp_loss
 
 
+    def _get_gemini_prompt(self, language: str, username: str, player_color: str, game_summary: dict, chunk_meta: Optional[dict] = None) -> str:
+        summary_text = ""
+        if game_summary.get('white_pattern'):
+            summary_text += f"- White's recurring pattern: {game_summary['white_pattern']}\n"
+        if game_summary.get('black_pattern'):
+            summary_text += f"- Black's recurring pattern: {game_summary['black_pattern']}\n"
+        chunk_info = f"\nCHUNK INFO: id={chunk_meta.get('id')}, total={chunk_meta.get('total')}, ply_range={chunk_meta.get('ply_range')}" if chunk_meta else ""
         
-    def get_gemini_analysis(self, full_game_analysis):
-        if not self.model: return {}
-        prompt = """You are a world-class chess coach, providing a detailed game review for a student. Your tone must be encouraging and insightful. For each move, you will be given the move played, its classification, the engine's best line, and the best follow-up from the player's position.
+        return f'''You are an expert chess coach providing analysis for '{username}' ({player_color}) in {language}.
+Your task is to provide detailed, insightful, and human-like commentary for each move in a chess game.
+Your response must be a single, valid JSON object. Do not include any text or markdown formatting outside of the JSON.
 
-Your task is to create a JSON object where each key is a unique ply number. For each ply, provide two keys:
+**Your Coaching Philosophy:**
+- **Be thorough and never skip details.** Your goal is to help the user understand every aspect of the move.
+- **Explain the 'Why':** Don't just state a fact. Explain *why* a move is good or bad, *why* a tactic works, and *why* a certain position is advantageous.
+- **Focus on Potential:** Discuss not only the immediate tactical results but also any *potential* threats or opportunities the move creates for the future. This includes forks, pins, discovered attacks that are not yet realized but are now possible.
+- **Human-like Commentary:** Use natural, encouraging, and educational language. Avoid robotic lists of data. Weave the tactical motifs and positional analysis into a clear, narrative explanation.
+- **Analyze Alternatives:** For every move, discuss the `missed_opportunities` (what the player could have played) and the `opponent_best_replies`. Explain what makes these moves strong and what the follow-up might look like. This is crucial for learning.
+- **Connect to Data:** Ground your analysis in the provided tactical and positional data. For example, if you see a "Fork" motif, explain how it works in the position. If you see "bad bishop", explain why the bishop is considered bad.
+- **Profitable Trades:** If you see a "Profitable Trade" tactic, it's critical to explain that the player's move allowed the opponent to initiate a favorable sequence of captures.
 
-1.  **`player_comment`**: A comment on the player's actual move.
-    *   If the move is good (Best, Excellent, Good), be affirming. Example: "A solid developing move."
-    *   If the move is an Inaccuracy, Mistake, or Blunder, gently explain the negative consequences. Be specific. Instead of "you lose a piece," say "This move unfortunately allows your opponent to win your knight on f6."
-    *   If the move is a "Miss," clearly state what was missed. Example: "You missed an opportunity to win the exchange with Rxf2."
+**JSON Response Format:**
+Your entire output must be a single JSON object.
 
-2.  **`engine_line_analysis`**: This is the most important part. Your analysis here must be deep and strategic.
-    *   **First, analyze the "Engine's Best Line."** Explain the strategic goal of the first 2-3 moves in this sequence. Don't just list the moves. Explain *why* they are strong. Example: "The engine's idea here is to play `Nf3` followed by `d4`. This combination fights for control of the center and prepares to challenge your opponent's bishop."
-    *   **Second, analyze the "Best Follow-up After Move."** If this line is different from the engine's best line, explain how the player should now proceed to make the best of the new situation. Example: "Now that the knight is on e7, the best plan is to play `c5` to challenge your opponent's control of the d4 square."
+--- EXAMPLE JSON RESPONSE FORMAT ---
+{{
+  "game_commentary": [
+    {{
+      "ply": 1,
+      "move_san": "e4",
+      "move_commentary": "An excellent first move! By placing a pawn in the center, you immediately fight for control of key squares and open lines for your queen and bishop. This is a very popular and strong way to begin the game.",
+      "missed_opportunities": [],
+      "best_replies": ["e5", "c5"]
+    }},
+    {{
+      "ply": 2,
+      "move_san": "d5?!",
+      "move_commentary": "This is an ambitious but risky move, known as the Scandinavian Defense. While it challenges White's center immediately, it brings your queen out very early, which can make it a target for your opponent's developing pieces.",
+      "missed_opportunities": [
+        "c5 was a great alternative. The Sicilian Defense is a top-tier response that fights for the center without exposing your queen so early."
+      ],
+      "best_replies": ["exd5"]
+    }}
+  ],
+  "game_summary": {{ "white_takeaway": "...", "black_takeaway": "...", "white_pattern": "...", "black_pattern": "..." }}
+}}
+---
 
-Return a single, valid JSON object containing the analysis for all moves.
-"""
-        for data in full_game_analysis:
-            best_engine_line_san = " ".join(data.get('engine_lines_before', [{}])[0].get('line_san', []))
-            best_follow_up_str = " ".join(data.get('best_follow_up_san', []))
-            prompt += (f"\n--- Ply {data['ply']}: (Move {data['move_number_str']}{'...' if data['turn'] == 'Black' else '.'} {data['move_san']}) ---\n"
-                       f"Classification: {data['classification']}\n"
-                       f"Engine's Best Line: {best_engine_line_san}\n"
-                       f"Best Follow-up After Move: {best_follow_up_str}\n")
-        
-        for attempt in range(3):
-            try:
-                response = self.model.generate_content(prompt)
-                text = response.text
-                start_index = text.find('{')
-                end_index = text.rfind('}')
-                if start_index != -1 and end_index != -1 and end_index > start_index:
-                    json_text = text[start_index:end_index+1]
-                    return json.loads(json_text)
-                else:
-                    json_match = re.search(r'```json\s*([\s\S]+?)\s*```', text)
-                    if json_match:
-                        return json.loads(json_match.group(1))
-                    else:
-                        raise ValueError("No valid JSON object found in the response.")
-            except Exception as e:
-                print(f"Gemini analysis error (attempt {attempt + 1}/3): {e}")
-                if attempt < 2:
-                    time.sleep(2) # Wait before retrying
-                else:
-                    print("--- Problematic Gemini Response ---\n", response.text if 'response' in locals() else "No response object.", "\n---------------------------------")
-                    return {}
-        return {}
+**Pre-computed Analysis for Your Reference:**
+{summary_text}
+{chunk_info}
+
+Now, generate the JSON response for the provided game data. Be as detailed and helpful as possible.
+'''
+
+
 
     def _send_gemini_request(self, prompt: str) -> Tuple[Optional[dict], Optional[dict]]:
         if not self.commentary_model: return None, None
@@ -3035,21 +3042,8 @@ class ChessGUI(ctk.CTk):
     def update_summary_display(self):
         if isinstance(self.game_summary, dict) and self.analysis_data:
             self.summary_frame.pack(fill="x", padx=10, pady=(0, 10), before=self.analysis_title_label)
-            
-            good_summary = []
-            if self.game_summary.get('motifs_all_good'):
-                good_summary.append(f"All Good: {self.game_summary.get('motifs_all_good')}")
-            if self.game_summary.get('motifs_some_good'):
-                good_summary.append(f"Some Good: {self.game_summary.get('motifs_some_good')}")
-
-            bad_summary = []
-            if self.game_summary.get('motifs_some_wrong'):
-                bad_summary.append(f"Some Wrong: {self.game_summary.get('motifs_some_wrong')}")
-            if self.game_summary.get('motifs_all_wrong'):
-                bad_summary.append(f"All Wrong: {self.game_summary.get('motifs_all_wrong')}")
-
-            self.white_summary_label.configure(text="⚪ Positive Motifs:\n" + "\n".join(good_summary))
-            self.black_summary_label.configure(text="⚫ Negative Motifs:\n" + "\n".join(bad_summary))
+            self.white_summary_label.configure(text=f"⚪ Takeaway: {self.game_summary.get('white_takeaway', 'N/A')}\n⚪ Pattern: {self.game_summary.get('white_pattern', 'N/A')}")
+            self.black_summary_label.configure(text=f"⚫ Takeaway: {self.game_summary.get('black_takeaway', 'N/A')}\n⚫ Pattern: {self.game_summary.get('black_pattern', 'N/A')}")
         else:
             self.summary_frame.pack_forget()
 
